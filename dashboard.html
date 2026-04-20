@@ -1,28 +1,19 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Explorer - Management System</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <meta charset="UTF-8">
-    <title>Database Explorer - Management System</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="config.js"></script>
+    <script src="dashboard.js"></script>
+    
     <style>
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(6, 11, 22, 0.8); backdrop-filter: blur(4px);
-            z-index: 9999; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; color: white;
-        }
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top: 4px solid var(--primary);
-            border-radius: 50%; width: 50px; height: 50px;
-            animation: spin 1s linear infinite; margin-bottom: 16px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         :root {
             --bg: #060b16;
             --surface: rgba(15, 23, 42, 0.88);
@@ -37,7 +28,9 @@
             --border: rgba(148, 163, 184, 0.14);
             --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
         }
+
         * { box-sizing: border-box; }
+        
         body {
             font-family: 'IBM Plex Sans Thai', 'Inter', system-ui, sans-serif;
             margin: 0;
@@ -50,6 +43,23 @@
             flex-direction: column;
             overflow: hidden;
         }
+
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(6, 11, 22, 0.8); backdrop-filter: blur(4px);
+            z-index: 9999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%; width: 50px; height: 50px;
+            animation: spin 1s linear infinite; margin-bottom: 16px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .toolbar {
             background: rgba(15, 23, 42, 0.98);
             padding: 18px 28px;
@@ -59,36 +69,46 @@
             border-bottom: 1px solid rgba(148, 163, 184, 0.12);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
+
         .toolbar .brand { display: flex; flex-direction: column; gap: 6px; }
         .toolbar .brand strong { font-size: 1rem; letter-spacing: 0.04em; color: var(--primary); }
         .toolbar .brand span { color: var(--muted); font-size: 0.9rem; }
         .toolbar .toolbar-meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
         .toolbar .meta-pill { color: #cbd5e1; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.18); padding: 8px 12px; border-radius: 999px; font-size: 0.85rem; }
+        
         .btn-logout { background: var(--danger); color: white; border: none; padding: 10px 16px; border-radius: 999px; cursor: pointer; font-size: 0.95rem; transition: transform 0.2s ease, background-color 0.2s ease; }
         .btn-logout:hover { background: #ef4444; transform: translateY(-1px); }
+
         .container { display: flex; flex: 1; overflow: hidden; }
+        
         .sidebar { width: 260px; min-width: 220px; background: rgba(15, 23, 42, 0.96); border-right: 1px solid rgba(148, 163, 184, 0.12); padding: 24px 18px; display: flex; flex-direction: column; gap: 18px; }
         .sidebar .section-title { font-size: 0.75rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+        
         .tree-item { padding: 14px 14px; color: #cbd5e1; cursor: pointer; border-radius: 14px; display: flex; align-items: center; gap: 10px; font-size: 0.95rem; transition: background 0.2s ease, color 0.2s ease; }
         .tree-item:hover { background: rgba(56, 189, 248, 0.12); color: white; }
         .tree-item.active { background: rgba(56, 189, 248, 0.18); color: white; }
+        
         .content { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 24px 28px; overflow-y: auto; }
+        
         .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
         .page-title h1 { margin: 0; font-size: clamp(1.75rem, 2.5vw, 2.5rem); letter-spacing: -0.04em; }
         .page-title p { margin: 12px 0 0; color: var(--muted); line-height: 1.75; max-width: 640px; }
+        
         .status-pill { color: var(--primary); background: rgba(56, 189, 248, 0.14); border: 1px solid rgba(56, 189, 248, 0.24); padding: 12px 18px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+        
         .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 24px; box-shadow: var(--shadow); }
+        
         table { width: 100%; border-collapse: collapse; background: transparent; font-size: 0.94rem; }
         th, td { padding: 14px 16px; text-align: left; vertical-align: middle; }
         th { background: rgba(15, 23, 42, 0.9); color: #cbd5e1; font-weight: 600; letter-spacing: 0.01em; border-bottom: 1px solid rgba(148, 163, 184, 0.12); }
         td { background: rgba(15, 23, 42, 0.76); color: #e2e8f0; border-bottom: 1px solid rgba(148, 163, 184, 0.08); }
         tr:nth-child(even) td { background: rgba(15, 23, 42, 0.62); }
         tr:hover td { background: rgba(56, 189, 248, 0.08); }
-        .btn-delete { background: transparent; color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.35); padding: 8px 12px; cursor: pointer; font-size: 0.85rem; border-radius: 999px; transition: background 0.2s ease, transform 0.2s ease; }
-        .btn-delete:hover { background: rgba(248, 113, 113, 0.16); transform: translateY(-1px); }
+        
         .access-denied { text-align: center; margin: 0 auto; max-width: 720px; color: #f8b4b4; background: rgba(135, 23, 43, 0.16); border: 1px solid rgba(248, 113, 113, 0.18); border-radius: 24px; padding: 40px 32px; }
         .access-denied h2 { margin: 0 0 12px; color: #fee2e2; font-size: 1.55rem; }
         .access-denied p { margin: 10px 0; color: var(--muted); line-height: 1.8; }
+
         @media (max-width: 980px) { .container { flex-direction: column; } .sidebar { width: 100%; min-width: auto; order: 2; } .content { order: 1; } }
         @media (max-width: 680px) { .toolbar { flex-direction: column; align-items: flex-start; gap: 14px; } .page-header { flex-direction: column; } .status-pill { width: fit-content; } }
     </style>
@@ -114,18 +134,18 @@
     <div class="container">
         <div class="sidebar">
             <div class="section-title">SCHEMAS / TABLES</div>
-            <div class="tree-item" data-view="users">👤 USERS</div>
-            <div class="tree-item active" data-view="logs">📂 LOG_ACTIVITY</div>
-            <div class="tree-item" data-view="system">📁 SYSTEM_CONFIG</div>
+            <div class="tree-item" data-view="users" id="menu-users">👤 USERS</div>
+            <div class="tree-item" data-view="logs" id="menu-logs">📂 LOG_ACTIVITY</div>
+            <div class="tree-item" data-view="system" id="menu-system">📁 SYSTEM_CONFIG</div>
         </div>
 
         <div class="content">
             <div class="page-header">
                 <div class="page-title">
-                    <h1>LOG ACTIVITY</h1>
-                    <p>ดูบันทึกเหตุการณ์ล่าสุดจากระบบและติดตามการใช้งานของผู้ใช้ในฐานข้อมูล</p>
+                    <h1 id="page-title-h1">LOG ACTIVITY</h1>
+                    <p id="page-title-p">ดูบันทึกเหตุการณ์ล่าสุดจากระบบและติดตามการใช้งานของผู้ใช้ในฐานข้อมูล</p>
                 </div>
-                <div class="status-pill">Admin Dashboard</div>
+                <div class="status-pill" id="dashboard-role-badge">Admin Dashboard</div>
             </div>
 
             <div id="adminPanel" class="panel" style="display: none;">
@@ -148,62 +168,86 @@
     </div>
 
     <script>
-        const userName = localStorage.getItem('u_name');
-        const userDept = localStorage.getItem('u_dept');
-        
-        document.getElementById('serverLabelText').innerText = CONFIG.SERVER_LABEL;
+        // 🌟 1. เช็คสิทธิ์และแสดงผลเริ่มต้น
+        document.addEventListener('DOMContentLoaded', () => {
+            const userName = localStorage.getItem('u_name');
+            const userDept = localStorage.getItem('u_dept');
+            
+            // ใช้ Optional Chaining เผื่อ config.js โหลดไม่ทัน
+            document.getElementById('serverLabelText').innerText = window.CONFIG?.SERVER_LABEL || 'PostgreSQL';
 
-        if (!userName) {
-            window.location.href = 'index.html';
-        } else {
+            if (!userName) {
+                window.location.href = 'index.html';
+                return;
+            } 
+
             document.getElementById('displayUser').innerText = `${userName} (${userDept})`;
             document.getElementById('uName').innerText = userName;
             const dept = userDept.toLowerCase();
 
-            if (dept === 'admin' || dept === 'hr') {
-                document.getElementById('adminPanel').style.display = 'block';
-                
-                if (dept === 'hr') {
-                    document.querySelector('[data-view="logs"]').style.display = 'none';
-                    document.querySelector('[data-view="system"]').style.display = 'none';
-                    setTimeout(() => document.querySelector('[data-view="users"]').click(), 100);
-                } else {
-                    loadLogs(); 
-                }
-                
-                setupViewSwitcher();
-            } else {
-                document.getElementById('userPanel').style.display = 'block';
-            }
-        }
+            document.getElementById('dashboard-role-badge').innerText = `${dept.toUpperCase()} Dashboard`;
 
-        function setupViewSwitcher() {
+            // ระบบคัดกรองตามตำแหน่ง
+            if (dept === 'admin') {
+                document.getElementById('adminPanel').style.display = 'block';
+                document.getElementById('menu-logs').classList.add('active'); // Admin เริ่มที่หน้า Log
+                loadLogs();
+                setupViewSwitcher(dept);
+            } 
+            else if (dept === 'hr') {
+                document.getElementById('adminPanel').style.display = 'block';
+                // HR ซ่อนเมนูอื่น เหลือแค่ Users
+                document.getElementById('menu-logs').style.display = 'none';
+                document.getElementById('menu-system').style.display = 'none';
+                document.getElementById('menu-users').classList.add('active'); // HR เริ่มที่หน้า User
+                updatePageTitle('users');
+                loadUsers();
+                setupViewSwitcher(dept);
+            } 
+            else {
+                // ตำแหน่งอื่นๆ (User)
+                document.getElementById('userPanel').style.display = 'block';
+                document.querySelector('.sidebar').style.display = 'none'; // ซ่อนเมนูซ้ายมือไปเลย
+            }
+        });
+
+        // 🌟 2. ระบบสลับหน้าเมนู
+        function setupViewSwitcher(role) {
             const items = document.querySelectorAll('.tree-item');
             items.forEach(item => {
                 item.addEventListener('click', () => {
                     const view = item.dataset.view;
-                    items.forEach(i => i.classList.toggle('active', i === item));
                     
-                    const pageTitleH1 = document.querySelector('.page-title h1');
-                    const pageTitleP = document.querySelector('.page-title p');
-
-                    if (view === 'users') {
-                        pageTitleH1.innerText = 'SYSTEM USERS';
-                        pageTitleP.innerText = 'รายชื่อผู้ใช้งานทั้งหมดในระบบ และแผนกที่สังกัด';
-                        loadUsers();
-                    } else if (view === 'logs') {
-                        pageTitleH1.innerText = 'LOG ACTIVITY';
-                        pageTitleP.innerText = 'ดูบันทึกเหตุการณ์ล่าสุดจากระบบและติดตามการใช้งานของผู้ใช้ในฐานข้อมูล';
-                        loadLogs();
-                    } else {
-                        pageTitleH1.innerText = 'SYSTEM CONFIG';
-                        pageTitleP.innerText = 'การตั้งค่าระบบและตัวแปรต่างๆ';
-                        showSystemPlaceholder();
-                    }
+                    // อัปเดตแถบสี Active เมนูซ้าย
+                    items.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    // เปลี่ยนหัวข้อหน้าและโหลดข้อมูล
+                    updatePageTitle(view);
+                    if (view === 'users') loadUsers();
+                    else if (view === 'logs') loadLogs();
+                    else showSystemPlaceholder();
                 });
             });
         }
 
+        // ฟังก์ชันเปลี่ยนชื่อหัวข้อ
+        function updatePageTitle(view) {
+            const h1 = document.getElementById('page-title-h1');
+            const p = document.getElementById('page-title-p');
+            if (view === 'users') {
+                h1.innerText = 'SYSTEM USERS';
+                p.innerText = 'รายชื่อผู้ใช้งานทั้งหมดในระบบ และแผนกที่สังกัด';
+            } else if (view === 'logs') {
+                h1.innerText = 'LOG ACTIVITY';
+                p.innerText = 'ดูบันทึกเหตุการณ์ล่าสุดจากระบบและติดตามการใช้งานของผู้ใช้ในฐานข้อมูล';
+            } else {
+                h1.innerText = 'SYSTEM CONFIG';
+                p.innerText = 'การตั้งค่าระบบและตัวแปรต่างๆ';
+            }
+        }
+
+        // 🌟 3. ฟังก์ชันสร้างหัวตาราง
         function setTableHeaders(columns) {
             const header = document.getElementById('tableHeader');
             const tr = document.createElement('tr');
@@ -217,20 +261,26 @@
         }
 
         function showSystemPlaceholder() {
-            document.getElementById('tableHeader').innerHTML = '';
-            document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="padding: 24px; color: var(--muted); text-align: center;">Coming soon: system configuration explorer.</td></tr>';
+            setTableHeaders(['PARAMETER', 'VALUE', 'DESCRIPTION']);
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="3" style="padding: 24px; color: var(--muted); text-align: center;">Coming soon: system configuration explorer.</td></tr>';
         }
 
+        // 🌟 4. ดึงข้อมูล LOGS (สำหรับ Admin)
         function loadLogs() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--muted);">กำลังโหลดข้อมูล...</td></tr>';
-            
             setTableHeaders(['ลำดับ', 'USER_ID', 'USERNAME', 'ACTION', 'CLIENT_IP', 'STATUS', 'LOG_TIME']);
 
             axios.get(`${CONFIG.API_URL}/all-logs`)
                 .then(res => {
                     const data = res.data; 
+                    if (!Array.isArray(data)) throw new Error("Data format error");
                     tbody.innerHTML = ''; 
+
+                    if(data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">ไม่มีประวัติการใช้งาน</td></tr>';
+                        return;
+                    }
 
                     data.forEach((row, index) => {
                         let statusBadge = '';
@@ -263,15 +313,16 @@
                 });
         }
 
+        // 🌟 5. ดึงข้อมูล USERS (สำหรับ Admin และ HR)
         function loadUsers() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted);">กำลังโหลดข้อมูล...</td></tr>';
-            
             setTableHeaders(['USER_ID', 'USERNAME', 'ROLE', 'STATUS', 'จัดการสิทธิ์']);
 
             axios.get(`${CONFIG.API_URL}/all-users`)
                 .then(res => {
                     const data = res.data; 
+                    if (!Array.isArray(data)) throw new Error("Data format error");
                     tbody.innerHTML = ''; 
 
                     data.forEach(row => {
@@ -301,9 +352,11 @@
                 });
         }
 
+        // 🌟 6. อัปเดตสถานะ User
         async function changeUserStatus(userId, newStatus) {
+            const userDept = localStorage.getItem('u_dept');
             if (!confirm(`ยืนยันการเปลี่ยนสถานะของไอดี ${userId} เป็น ${newStatus} ใช่หรือไม่?`)) {
-                loadUsers(); 
+                loadUsers(); // โหลดใหม่เพื่อรีเซ็ตค่า Dropdown กลับเป็นค่าเดิม
                 return;
             }
 
@@ -314,6 +367,7 @@
                 });
                 
                 alert('อัปเดตสถานะเสร็จสมบูรณ์!');
+                loadLogs(); // อัปเดต Log ทันทีถ้าเป็นแอดมิน
                 loadUsers(); 
             } catch (error) {
                 alert('เกิดข้อผิดพลาด คุณอาจไม่มีสิทธิ์ หรือเซิร์ฟเวอร์มีปัญหา');
@@ -321,11 +375,11 @@
             }
         }
 
+        // 🌟 7. ออกจากระบบ
         function logout() {
             localStorage.clear();
             window.location.href = 'index.html';
         }
-        
     </script>
 </body>
 </html>
