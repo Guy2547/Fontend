@@ -21,6 +21,7 @@
             --primary-hover: #0ea5e9;
             --danger: #ef4444;
             --danger-hover: #dc2626;
+            --success: #4ade80;
             --card-bg: rgba(51, 65, 85, 0.5);
             --border: rgba(148, 163, 184, 0.2);
         }
@@ -105,7 +106,7 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: none; /* ซ่อนไว้ก่อน รอเช็คสิทธิ์ */
+            display: none;
         }
 
         .big-btn:hover {
@@ -120,7 +121,7 @@
 
         /* 🌟 หน้าจอที่ 2: หน้าแสดงตารางข้อมูล */
         #data-view {
-            display: none; /* ซ่อนไว้ก่อน */
+            display: none;
             background: var(--surface);
             border-radius: 16px;
             padding: 30px;
@@ -159,6 +160,68 @@
         tr:hover td { background: rgba(255,255,255,0.05); }
 
         .access-denied { text-align: center; color: var(--danger); margin-top: 50px; }
+
+        /* 🌟🌟🌟 Custom Modal Popup 🌟🌟🌟 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none; /* ซ่อนไว้ก่อน */
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-box {
+            background: #1e293b;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-icon { font-size: 3.5rem; margin-bottom: 16px; }
+        .modal-title { margin: 0 0 12px; color: white; font-size: 1.4rem; }
+        .modal-text { margin: 0 0 24px; color: var(--muted); font-size: 1rem; line-height: 1.5; }
+
+        .modal-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.2s;
+            flex: 1;
+        }
+
+        .btn-cancel { background: rgba(255,255,255,0.1); color: white; }
+        .btn-cancel:hover { background: rgba(255,255,255,0.2); }
+        .btn-confirm { background: var(--primary); color: #0f172a; }
+        .btn-confirm:hover { filter: brightness(1.1); }
     </style>
 </head>
 <body>
@@ -178,30 +241,25 @@
     </nav>
 
     <div class="container">
-        
         <div id="menu-view">
             <div class="menu-title">
                 <h2>เลือกเมนูการจัดการ</h2>
                 <p style="color: var(--muted);">เมนูจะแสดงตามสิทธิ์การเข้าถึงของคุณ</p>
             </div>
-            
             <div class="button-grid">
                 <div class="big-btn" id="btn-users" onclick="openDataView('users')">
                     <div class="icon">👥</div>
                     <h3>จัดการ User</h3>
                     <p>ดูรายชื่อและแก้ไขสถานะผู้ใช้งาน</p>
                 </div>
-
                 <div class="big-btn" id="btn-logs" onclick="openDataView('logs')">
                     <div class="icon">📊</div>
                     <h3>ดู System Logs</h3>
                     <p>ตรวจสอบประวัติการใช้งานระบบ</p>
                 </div>
             </div>
-
             <div id="no-access-msg" class="access-denied" style="display: none;">
                 <h3>🚫 คุณไม่มีสิทธิ์เข้าถึงเมนูใดๆ ในหน้านี้</h3>
-                <p>กรุณาติดต่อผู้ดูแลระบบ</p>
             </div>
         </div>
 
@@ -213,37 +271,41 @@
                 </div>
                 <button class="btn-back" onclick="goBackToMenu()">⬅️ กลับหน้าเลือกเมนู</button>
             </div>
-
             <div class="table-responsive">
                 <table>
-                    <thead id="tableHeader">
-                        <tr></tr>
-                    </thead>
+                    <thead id="tableHeader"><tr></tr></thead>
                     <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </div>
+    </div>
 
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-icon" id="modal-icon">⚠️</div>
+            <h3 class="modal-title" id="modal-title">ยืนยันการทำรายการ</h3>
+            <p class="modal-text" id="modal-text">รายละเอียดข้อความ...</p>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btn-modal-cancel">ยกเลิก</button>
+                <button class="btn-modal btn-confirm" id="btn-modal-confirm">ยืนยัน</button>
+            </div>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. เช็คสิทธิ์และล้วงกระเป๋า
             const userName = localStorage.getItem('u_name');
             const userDept = localStorage.getItem('u_dept');
 
             if (!userName || !userDept) {
-                alert("⚠️ กรุณาเข้าสู่ระบบก่อน");
                 window.location.href = 'index.html';
                 return;
             }
 
-            // 2. แสดงชื่อมุมขวาบน
             document.getElementById('display-name').innerText = userName;
             const dept = userDept.toLowerCase();
             document.getElementById('display-role').innerText = dept.toUpperCase();
 
-            // 3. ระบบคัดกรองปุ่ม (RBAC)
             const btnUsers = document.getElementById('btn-users');
             const btnLogs = document.getElementById('btn-logs');
             const noAccessMsg = document.getElementById('no-access-msg');
@@ -251,20 +313,14 @@
             if (dept === 'admin') {
                 btnUsers.style.display = 'block';
                 btnLogs.style.display = 'block';
-            } 
-            else if (dept === 'hr') {
+            } else if (dept === 'hr') {
                 btnUsers.style.display = 'block';
-                // HR ไม่เห็นปุ่ม Logs
-            } 
-            else {
-                // ถ้าเป็น User ธรรมดา ไม่ให้เห็นปุ่มไหนเลย
+            } else {
                 noAccessMsg.style.display = 'block';
             }
         });
 
-        // 🌟 ฟังก์ชัน: เมื่อกดปุ่มเมนู ให้สลับหน้าจอไปโชว์ตาราง
         function openDataView(type) {
-            // ซ่อนหน้าเมนู โชว์หน้าตาราง
             document.getElementById('menu-view').style.display = 'none';
             document.getElementById('data-view').style.display = 'block';
 
@@ -282,13 +338,11 @@
             }
         }
 
-        // 🌟 ฟังก์ชัน: ปุ่มย้อนกลับมาหน้าเมนู
         function goBackToMenu() {
             document.getElementById('data-view').style.display = 'none';
             document.getElementById('menu-view').style.display = 'flex';
         }
 
-        // 🌟 ฟังก์ชันสร้างหัวตาราง
         function setTableHeaders(columns) {
             const header = document.getElementById('tableHeader');
             const tr = document.createElement('tr');
@@ -301,7 +355,6 @@
             header.appendChild(tr);
         }
 
-        // 🌟 ฟังก์ชันโหลดข้อมูล Users (ยิง API)
         function loadUsers() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">⏳ กำลังโหลดข้อมูล...</td></tr>';
@@ -337,7 +390,6 @@
                 });
         }
 
-        // 🌟 ฟังก์ชันโหลดข้อมูล Logs (ยิง API)
         function loadLogs() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">⏳ กำลังโหลดข้อมูล...</td></tr>';
@@ -347,15 +399,12 @@
                 .then(res => {
                     const data = res.data; 
                     tbody.innerHTML = ''; 
-                    
                     if(data.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">ไม่มีประวัติการใช้งาน</td></tr>';
                         return;
                     }
-
                     data.forEach((row, index) => {
                         let statusBadge = row.STATUS === 'SUCCESS' ? `<span style="color: #4ade80;">${row.STATUS}</span>` : `<span style="color: #f87171;">${row.STATUS}</span>`;
-
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td>${index + 1}</td>
@@ -374,24 +423,86 @@
                 });
         }
 
-        // 🌟 ฟังก์ชันเปลี่ยนสถานะ User
+        // 🌟🌟🌟 ฟังก์ชันควบคุม Custom Modal 🌟🌟🌟
+        function showPopup(title, text, type = 'confirm') {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('custom-modal');
+                const iconEl = document.getElementById('modal-icon');
+                const titleEl = document.getElementById('modal-title');
+                const textEl = document.getElementById('modal-text');
+                const btnCancel = document.getElementById('btn-modal-cancel');
+                const btnConfirm = document.getElementById('btn-modal-confirm');
+
+                titleEl.innerText = title;
+                textEl.innerText = text;
+
+                // ปรับหน้าตาตามประเภท (confirm, success, error)
+                if (type === 'success') {
+                    iconEl.innerText = '✅';
+                    btnCancel.style.display = 'none';
+                    btnConfirm.innerText = 'ตกลง';
+                    btnConfirm.style.background = 'var(--success)';
+                } else if (type === 'error') {
+                    iconEl.innerText = '❌';
+                    btnCancel.style.display = 'none';
+                    btnConfirm.innerText = 'รับทราบ';
+                    btnConfirm.style.background = 'var(--danger)';
+                    btnConfirm.style.color = 'white';
+                } else {
+                    // แบบ confirm มี 2 ปุ่ม
+                    iconEl.innerText = '⚠️';
+                    btnCancel.style.display = 'block';
+                    btnConfirm.innerText = 'ยืนยัน';
+                    btnConfirm.style.background = 'var(--primary)';
+                    btnConfirm.style.color = '#0f172a';
+                }
+
+                overlay.classList.add('show');
+
+                // เวลากดปุ่ม
+                btnConfirm.onclick = () => {
+                    overlay.classList.remove('show');
+                    resolve(true); // ส่งค่า true กลับไปว่าผู้ใช้กดยืนยัน
+                };
+
+                btnCancel.onclick = () => {
+                    overlay.classList.remove('show');
+                    resolve(false); // ส่งค่า false กลับไปว่าผู้ใช้กดยกเลิก
+                };
+            });
+        }
+
+        // 🌟 ฟังก์ชันเปลี่ยนสถานะ (ใช้ Custom Modal แล้ว!)
         async function changeUserStatus(userId, newStatus) {
             const userDept = localStorage.getItem('u_dept');
-            if (!confirm(`ยืนยันการเปลี่ยนสถานะของไอดี ${userId} เป็น ${newStatus} ใช่หรือไม่?`)) {
-                loadUsers(); 
+            
+            // เรียกใช้ป็อบอัพของเราแทน confirm() แบบเดิม
+            const isConfirmed = await showPopup(
+                'ยืนยันการทำรายการ?', 
+                `คุณต้องการเปลี่ยนสถานะของไอดี ${userId} เป็น ${newStatus} ใช่หรือไม่?`, 
+                'confirm'
+            );
+
+            // ถ้ากดยกเลิก
+            if (!isConfirmed) {
+                loadUsers(); // โหลดตารางใหม่เพื่อให้ Dropdown กลับเป็นค่าเดิม
                 return;
             }
+
+            // ถ้ากดยืนยัน
             try {
                 await axios.put(`${CONFIG.API_URL}/update-status/${userId}`, { status: newStatus, dept: userDept });
-                alert('อัปเดตสถานะเสร็จสมบูรณ์!');
+                
+                // แจ้งเตือนความสำเร็จด้วยป็อบอัพแทน alert()
+                await showPopup('สำเร็จ!', 'อัปเดตสถานะผู้ใช้งานเสร็จสมบูรณ์', 'success');
                 loadUsers(); 
             } catch (error) {
-                alert('เกิดข้อผิดพลาด คุณอาจไม่มีสิทธิ์');
+                // แจ้งเตือน Error
+                await showPopup('ข้อผิดพลาด', 'คุณไม่มีสิทธิ์ หรือเซิร์ฟเวอร์มีปัญหา', 'error');
                 loadUsers();
             }
         }
 
-        // 🌟 ฟังก์ชันออกจากระบบ
         function logout() {
             localStorage.clear();
             window.location.href = 'index.html';
