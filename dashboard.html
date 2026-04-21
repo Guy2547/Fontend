@@ -355,6 +355,7 @@
             header.appendChild(tr);
         }
 
+        // 🌟 ฟังก์ชันโหลดข้อมูล Users (อัปเดต INACTIVATED)
         function loadUsers() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">⏳ กำลังโหลดข้อมูล...</td></tr>';
@@ -366,12 +367,17 @@
                     tbody.innerHTML = ''; 
                     data.forEach(row => {
                         const tr = document.createElement('tr');
-                        const statusColor = row.STATUS === 'ACTIVE' ? '#4ade80' : '#f87171';
+                        
+                        // 🌟 ดักจับ: ถ้าข้อมูลเก่าเป็น DEACTIVATED ให้โชว์เป็น INACTIVATED
+                        let currentStatus = row.STATUS === 'DEACTIVATED' ? 'INACTIVATED' : row.STATUS;
+                        
+                        // ถ้าเป็น ACTIVE สีเขียว นอกนั้น (เช่น INACTIVATED) เป็นสีแดง
+                        const statusColor = currentStatus === 'ACTIVE' ? '#4ade80' : '#f87171';
                         
                         const actionHtml = `
                             <select onchange="changeUserStatus('${row.USER_ID}', this.value)" style="padding: 6px; border-radius: 6px; background: rgba(15,23,42,0.9); color: white; border: 1px solid var(--primary); cursor: pointer;">
-                                <option value="ACTIVE" ${row.STATUS === 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
-                                <option value="DEACTIVATED" ${row.STATUS === 'DEACTIVATED' ? 'selected' : ''}>DEACTIVATED</option>
+                                <option value="ACTIVE" ${currentStatus === 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
+                               <option value="DEACTIVATED" ${row.STATUS === 'DEACTIVATED' ? 'selected' : ''}>DEACTIVATED</option>
                             </select>
                         `;
 
@@ -379,7 +385,7 @@
                             <td>${row.USER_ID || '-'}</td>
                             <td>${row.USERNAME || '-'}</td>
                             <td>${row.DEPARTMENT || '-'}</td>
-                            <td style="color: ${statusColor}; font-weight: bold;">${row.STATUS || 'ACTIVE'}</td>
+                            <td style="color: ${statusColor}; font-weight: bold;">${currentStatus}</td>
                             <td>${actionHtml}</td>
                         `;
                         tbody.appendChild(tr);
@@ -390,6 +396,7 @@
                 });
         }
 
+        // 🌟 ฟังก์ชันโหลดข้อมูล Logs (อัปเดต INACTIVATED)
         function loadLogs() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">⏳ กำลังโหลดข้อมูล...</td></tr>';
@@ -404,7 +411,14 @@
                         return;
                     }
                     data.forEach((row, index) => {
-                        let statusBadge = row.STATUS === 'SUCCESS' ? `<span style="color: #4ade80;">${row.STATUS}</span>` : `<span style="color: #f87171;">${row.STATUS}</span>`;
+                        // 🌟 ดักจับข้อมูลเก่าเช่นกัน
+                        let currentStatus = row.STATUS === 'DEACTIVATED' ? 'INACTIVATED' : row.STATUS;
+                        
+                        // สีเขียวสำหรับ SUCCESS/ACTIVE สีแดงสำหรับ INACTIVATED และอื่นๆ
+                        let statusBadge = (currentStatus === 'SUCCESS' || currentStatus === 'ACTIVE') 
+                            ? `<span style="color: #4ade80;">${currentStatus}</span>` 
+                            : `<span style="color: #f87171;">${currentStatus}</span>`;
+
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td>${index + 1}</td>
@@ -423,7 +437,6 @@
                 });
         }
 
-        // 🌟🌟🌟 ฟังก์ชันควบคุม Custom Modal 🌟🌟🌟
         function showPopup(title, text, type = 'confirm') {
             return new Promise((resolve) => {
                 const overlay = document.getElementById('custom-modal');
