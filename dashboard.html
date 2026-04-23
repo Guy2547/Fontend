@@ -292,6 +292,23 @@
         </div>
     </div>
 
+    <div id="logFilters" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+    
+    <input type="text" id="searchId" placeholder="🔍 ค้นหา ID หรือ ชื่อ..." onkeyup="filterLogsData()" 
+           style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; flex: 1; min-width: 200px;">
+    
+    <input type="date" id="searchDate" onchange="filterLogsData()" 
+           style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer;">
+    
+    <select id="searchStatus" onchange="filterLogsData()" 
+            style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer;">
+        <option value="">🟢 ทุกสถานะ (All)</option>
+        <option value="SUCCESS">✅ สำเร็จ (SUCCESS)</option>
+        <option value="FAILED">❌ ไม่สำเร็จ (FAILED)</option>
+        <option value="WRONG_PASSWORD">🔑 รหัสผิด (WRONG_PASSWORD)</option>
+        <option value="DEACTIVATED">🚫 ระงับการใช้งาน (DEACTIVATED)</option>
+    </select>
+</div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const userName = localStorage.getItem('u_name');
