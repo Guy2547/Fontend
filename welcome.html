@@ -7,6 +7,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="config.js"></script>
+    <script src="utils/storage.js"></script>
+    <script src="js/welcome.js"></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -126,25 +128,8 @@
             </div>
         </div>
 
-        <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+        <button class="btn-logout" onclick="WelcomePage.logout()">ออกจากระบบ</button>
     </div>
 
-    <script>
-        // เช็คว่าล็อกอินมาหรือยัง ถ้ายังให้เด้งกลับไปหน้าแรก
-        if (!localStorage.getItem('u_name')) {
-            window.location.href = 'index.html';
-        } else {
-            // ดึงข้อมูลจาก LocalStorage มาโชว์
-            document.getElementById('displayId').innerText = localStorage.getItem('u_id');
-            document.getElementById('displayName').innerText = localStorage.getItem('u_name');
-            document.getElementById('displayDept').innerText = localStorage.getItem('u_dept');
-            document.getElementById('displayTime').innerText = localStorage.getItem('u_login_time');
-        }
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'index.html';
-        }
-    </script>
 </body>
 </html>

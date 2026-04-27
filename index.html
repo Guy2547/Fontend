@@ -8,7 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="config.js"></script> 
+    <script src="config.js"></script>
+    <script src="utils/storage.js"></script>
+    <script src="utils/api.js"></script>
+    <script src="js/login.js"></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -130,113 +133,8 @@
             <input type="password" id="password" placeholder="ใส่รหัสผ่าน">
         </div>
 
-        <button type="button" id="loginBtn" onclick="handleLogin()">เข้าสู่ระบบ</button>
+        <button type="button" id="loginBtn" onclick="LoginPage.handleLogin()">เข้าสู่ระบบ</button>
     </div>
 
-    <script>
-        // 🌟 1. เช็คว่าเคยล็อกอินไว้หรือยัง? ถ้าเคย ให้เด้งไปหน้าเว็บอัตโนมัติ
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedDept = localStorage.getItem('u_dept');
-            if (savedDept) {
-                // ถ้ามีตำแหน่งในระบบแล้ว ให้เช็คว่าต้องเด้งไปหน้าไหน
-                const dept = savedDept.toLowerCase();
-                if(dept === 'admin' || dept === 'hr') {
-                    window.location.href = 'dashboard.html';
-                } else {
-                    window.location.href = 'welcome.html';
-                }
-            }
-            
-            // รองรับการกดปุ่ม Enter เพื่อล็อกอิน
-            document.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') handleLogin();
-            });
-        });
-
-        // 🌟 2. ฟังก์ชันแสดงกล่องแจ้งเตือน Error
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.innerText = message;
-            errorDiv.style.display = 'block';
-            
-            errorDiv.style.animation = 'none';
-            setTimeout(() => errorDiv.style.animation = 'shake 0.4s ease-in-out', 10);
-        }
-
-        // 🌟 3. ฟังก์ชันหลักในการ Login
-        async function handleLogin() {
-            const userId = document.getElementById('userId').value.trim();
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('errorMessage');
-            const loginBtn = document.getElementById('loginBtn');
-
-            // ซ่อนกล่อง Error เก่าก่อน
-            errorDiv.style.display = 'none';
-
-            // เช็คว่ากรอกข้อมูลครบไหม
-            if (!userId || !password) {
-                showError('⚠️ กรุณากรอก USER ID และรหัสผ่านให้ครบถ้วน');
-                return;
-            }
-
-            // เปลี่ยนสถานะปุ่มตอนกำลังโหลด
-            loginBtn.innerText = 'กำลังตรวจสอบ...';
-            loginBtn.disabled = true;
-
-            try {
-                // ยิง API ไปหา Backend ของคุณ (อิงจาก config.js)
-                const res = await axios.post(`${CONFIG.API_URL}/login`, {
-                    USER_ID: userId,
-                    PASSWORD: password
-                });
-                
-                const data = res.data;
-
-                // 📌 จุดสำคัญ: เก็บข้อมูลลง localStorage เพื่อให้หน้าอื่นดึงไปใช้ต่อได้
-                localStorage.setItem('u_id', data.user.id || userId); 
-                localStorage.setItem('u_name', data.user.name || 'ผู้ใช้งาน');
-                localStorage.setItem('u_dept', data.user.dept || 'user');
-                if (data.session) {
-                    localStorage.setItem('u_ip', data.session.ip);
-                    localStorage.setItem('u_login_time', data.session.loginTime);
-                }
-
-                // เปลี่ยนปุ่มเป็นสีเขียว
-                loginBtn.style.backgroundColor = '#22c55e';
-                loginBtn.innerText = 'เข้าสู่ระบบสำเร็จ! กำลังเปลี่ยนหน้า...';
-                
-                // หน่วงเวลา 0.5 วินาทีให้ผู้ใช้เห็นข้อความ แล้วค่อยเปลี่ยนหน้า
-                setTimeout(() => {
-                    const dept = (data.user.dept || 'user').toLowerCase();
-                    // แยกว่าใครไปหน้าไหน
-                    if(dept === 'admin' || dept === 'hr') {
-                        window.location.href = 'dashboard.html';
-                    } else {
-                        window.location.href = 'welcome.html';
-                    }
-                }, 500);
-
-            } catch (error) {
-                // คืนค่าปุ่มกลับมาให้กดใหม่ได้
-                loginBtn.innerText = 'เข้าสู่ระบบ';
-                loginBtn.disabled = false;
-                
-                // จัดการ Error ตาม Status Code จาก Backend
-                if (error.response) {
-                    if (error.response.status === 404) {
-                        showError("❌ ไม่พบ USER ID นี้ในระบบ");
-                    } else if (error.response.status === 401) {
-                        showError("❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
-                    } else if (error.response.status === 403) {
-                        showError("❌ บัญชีของคุณถูกระงับการใช้งาน");
-                    } else {
-                        showError("⚠️ เกิดข้อผิดพลาดจากเซิร์ฟเวอร์");
-                    }
-                } else {
-                    showError("🔌 ไม่สามารถเชื่อมต่อฐานข้อมูลได้ หรือเซิร์ฟเวอร์ปิดอยู่");
-                }
-            }
-        }
-    </script>
 </body>
 </html>
