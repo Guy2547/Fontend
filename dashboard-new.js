@@ -38,25 +38,28 @@ const Dashboard = {
         }
 
         const user = StorageService.getUser();
-        Navbar.init(user.name, user.dept);
+        
+        // 🌟 แก้ไข: แปลง Array Role ให้เป็นข้อความสวยๆ ก่อนส่งไปโชว์ที่ Navbar (เช่น "ADMIN, IT")
+        const roleDisplay = Array.isArray(user.dept) ? user.dept.join(', ').toUpperCase() : (user.dept || 'ROLE').toUpperCase();
+        Navbar.init(user.name, roleDisplay);
 
-        const dept = (user.dept || '').toLowerCase();
         const btnUsers = document.getElementById('btn-users');
         const btnLogs = document.getElementById('btn-logs');
         const noAccessMsg = document.getElementById('no-access-msg');
 
-        // 🌟 ตั้งสิทธิ์การมองเห็นเมนู
-        if (dept === 'admin' || dept === 'it') {
+        // 🌟 แก้ไข: รับค่า Array มาเช็คสิทธิ์ซ่อน/โชว์เมนูด้วย .includes()
+        const userRoles = Array.isArray(user.dept) ? user.dept.map(r => r.toLowerCase()) : [(user.dept || '').toLowerCase()];
+
+        if (userRoles.includes('admin') || userRoles.includes('it')) {
             btnUsers.style.display = 'block';
             btnLogs.style.display = 'block';
-        } else if (dept === 'hr' || dept === 'marketing') {
+        } else if (userRoles.includes('hr') || userRoles.includes('marketing')) {
             btnUsers.style.display = 'block';
         } else {
             noAccessMsg.style.display = 'block';
         }
 
-        // 🌟 [Real-time] เชื่อมต่อ Socket.io (เปลี่ยน URL เป็นของ Railway คุณ)
-        // ถ้าใช้ Polling (5 วินาที) ด้านล่างแล้ว จะไม่ใส่ส่วนนี้ก็ได้ครับ
+        // 🌟 [Real-time] เชื่อมต่อ Socket.io
         try {
             const socket = io('https://server-logs-dashboard-production-b865.up.railway.app'); 
             socket.on('new-log', () => {
@@ -122,9 +125,9 @@ const Dashboard = {
         Table.showLoading(5);
         try {
             const res = await ApiService.getAllUsers();
-            Dashboard.state.allUsersData = res.data;
-            Dashboard.state.currentFilteredData = res.data;
-            Dashboard.renderUsers(res.data);
+            Dashboard.state.allUsersData = res.data || res; // รองรับทั้งแบบมี .data และแบบ Array ตรงๆ
+            Dashboard.state.currentFilteredData = Dashboard.state.allUsersData;
+            Dashboard.renderUsers(Dashboard.state.currentFilteredData);
         } catch (err) {
             Table.showError(5);
         }
@@ -133,8 +136,12 @@ const Dashboard = {
     filterUsers: () => {
         const searchRole = document.getElementById('searchRole').value.toLowerCase();
         Dashboard.state.currentFilteredData = Dashboard.state.allUsersData.filter(row => {
-            const role = (row.DEPARTMENT || row.department || row.ROLE || row.role || '').toLowerCase();
-            return searchRole === "" || role === searchRole;
+            // 🌟 แก้ไข: ดึงข้อมูล Array มาค้นหา
+            let rawRoles = row.DEPARTMENT || row.department || row.ROLE || row.role || [];
+            if (typeof rawRoles === 'string') rawRoles = [rawRoles];
+            const roleList = rawRoles.map(r => (r || '').toLowerCase());
+            
+            return searchRole === "" || roleList.includes(searchRole);
         });
         Table.state.currentPage = 1;
         Dashboard.renderUsers(Dashboard.state.currentFilteredData);
@@ -155,16 +162,20 @@ const Dashboard = {
             const tr = document.createElement('tr');
             const userId = row.USER_ID || row.user_id || '-';
             const username = row.USERNAME || row.username || '-';
-            const dept = row.DEPARTMENT || row.department || row.ROLE || row.role || '-';
-            const rawStatus = row.STATUS || row.status || 'ACTIVE';
+            
+            // 🌟 แก้ไข: จัดการ Role ที่เป็น Array ให้ออกมาเป็นป้าย Tag สวยๆ
+            let rawRoles = row.DEPARTMENT || row.department || row.ROLE || row.role || [];
+            if (typeof rawRoles === 'string') rawRoles = [rawRoles];
+            const deptDisplay = rawRoles.length > 0 ? rawRoles.join(', ').toUpperCase() : '-';
 
+            const rawStatus = row.STATUS || row.status || 'ACTIVE';
             let currentStatus = rawStatus === 'DEACTIVATED' ? 'INACTIVATED' : rawStatus;
             const statusColor = currentStatus === 'ACTIVE' ? '#4ade80' : '#f87171';
             
             tr.innerHTML = `
                 <td>${userId}</td>
                 <td>${username}</td>
-                <td>${dept}</td>
+                <td><span style="background: rgba(56, 189, 248, 0.1); color: var(--primary); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">${deptDisplay}</span></td>
                 <td style="color: ${statusColor}; font-weight: bold;">${currentStatus}</td>
                 <td>
                     <select onchange="Dashboard.changeStatus('${userId}', this.value)" style="padding: 6px; border-radius: 6px; background: rgba(15,23,42,0.9); color: white; border: 1px solid var(--primary); cursor: pointer;">
@@ -192,29 +203,28 @@ const Dashboard = {
         }
     },
 
-        loadLogs: async () => {
-    try {
-        // ดึงข้อมูลจาก URL ที่คุณเปิดใน Browser แล้วเจอ Ammarin
-        const response = await fetch(`${CONFIG.API_URL}/all-logs`);
-        const res = await response.json();
-        
-        console.log("เช็คข้อมูลดิบ:", res);
+    loadLogs: async () => {
+        try {
+            // 🌟 แก้ไข URL เป็น /logs ให้ตรงกับ Backend ตัวใหม่ที่เราเพิ่งทำ
+            const response = await fetch(`${CONFIG.API_URL}/logs`);
+            const res = await response.json();
+            
+            console.log("เช็คข้อมูลดิบ:", res);
+            
+            const logs = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
 
-        // 🌟 จุดสำคัญ: ต้องแกะเอาเฉพาะชั้น .data มาใช้ (เพราะ Backend ส่ง { status: 'success', data: [...] })
-        const logs = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
-
-        if (logs.length > 0) {
-            Dashboard.state.allLogsData = logs;
-            Dashboard.state.currentFilteredData = logs;
-            Dashboard.renderLogs(logs); // สั่งวาดตาราง
-        } else {
-            console.log("ไม่พบข้อมูลหรือดึงข้อมูลมาผิดชั้น");
-            Table.showEmpty(7);
+            if (logs.length > 0) {
+                Dashboard.state.allLogsData = logs;
+                Dashboard.state.currentFilteredData = logs;
+                Dashboard.renderLogs(logs); 
+            } else {
+                console.log("ไม่พบข้อมูลหรือดึงข้อมูลมาผิดชั้น");
+                Table.showEmpty(7);
+            }
+        } catch (err) {
+            console.error("ดึง Logs ล้มเหลว:", err);
         }
-    } catch (err) {
-        console.error("ดึง Logs ล้มเหลว:", err);
-    }
-},
+    },
 
     filterLogs: () => {
         const searchId = document.getElementById('searchId').value.toLowerCase();
